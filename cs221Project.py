@@ -1,3 +1,6 @@
+from datetime import datetime
+
+
 # Kaggle
 ## Keras for deep learning
 import keras
@@ -24,8 +27,18 @@ import pandas as pd
 
 def load_data(filename, sequence_length):
      #Read the data file
-    raw_data = pd.read_csv(filename, dtype = float).values
-    
+    raw_data = pd.read_csv(filename).values
+    print(raw_data.shape[0])
+    print(raw_data.shape[1])
+    # input("wait")
+    # for data in raw_data:
+    #     formed_data = str(data).strip("[]").split()
+        # datetime_object = datetime.strptime(formed_data[0]., "%Y-%m-%d")
+
+        # print(datetime_object)
+
+        # input("wait")
+
     #Change all zeros to the number before the zero occurs
     for x in range(0, raw_data.shape[0]):
         for y in range(0, raw_data.shape[1]):
@@ -40,18 +53,19 @@ def load_data(filename, sequence_length):
     result = []
     for index in range(len(data) - sequence_length):
         result.append(data[index: index + sequence_length])
+  
     
     #Normalizing data by going through each window
     #Every value in the window is divided by the first value in the window, and then 1 is subtracted
     d0 = np.array(result)
     dr = np.zeros_like(d0)
-    dr[:,1:,:] = d0[:,1:,:] / d0[:,0:1,:] - 1
+    # dr[:,1:,:] = d0[:,1:,:] / d0[:,0:1,:] - 1
     
     #Keeping the unnormalized prices for Y_test
     #Useful when graphing bitcoin price over time later
     start = 2400
     end = int(dr.shape[0] + 1)
-    unnormalized_bases = d0[start:end,0:1,20]
+    unnormalized_bases = d0[start:end,0:1,:]
     
     #Splitting data set into training (First 90% of data points) and testing data (last 10% of data points)
     split_line = round(0.9 * dr.shape[0])
@@ -63,16 +77,16 @@ def load_data(filename, sequence_length):
     #Training Data
     X_train = training_data[:, :-1]
     Y_train = training_data[:, -1]
-    Y_train = Y_train[:, 20]
+    Y_train = Y_train[:, 7]
     
     #Testing data
     X_test = dr[int(split_line):, :-1]
     Y_test = dr[int(split_line):, 49, :]
-    Y_test = Y_test[:, 20]
+    Y_test = Y_test[:, 7]
 
     #Get the day before Y_test's price
     Y_daybefore = dr[int(split_line):, 48, :]
-    Y_daybefore = Y_daybefore[:, 20]
+    Y_daybefore = Y_daybefore[:, 7]
     
     #Get window size and sequence length
     sequence_length = sequence_length
@@ -80,7 +94,7 @@ def load_data(filename, sequence_length):
     
     return X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size
 
-def initModel(window_size,dropout_value,activation_function,loss_function,optimizer):
+def init_model(window_size,dropout_value,activation_function,loss_function,optimizer,X_train):
      #Create a Sequential model using Keras
     model = Sequential()
 
@@ -106,7 +120,7 @@ def initModel(window_size,dropout_value,activation_function,loss_function,optimi
     
     return model
 
-def fit_model(mdoel,X_train,Y_train,batch_num,num_epoch,val_split):
+def fit_model(model,X_train,Y_train,batch_num,num_epoch,val_split):
      #Record the time the model starts training
     start = time.time()
 
@@ -244,26 +258,26 @@ def loader(infile):
     # bitcoin,ethereum,ripple,litecoin,eos,bitcoin-cash,tron,stellar,binance-coin
     return crypto_data
 
-def predict(crypto_data):
+# def predict(crypto_data):
 
-    for coin in crypto_data:
-        # fit model
-        df_coin = pd.DataFrame(crypto_data[coin])
-        df_coin = df_coin[['Date','velocity']]
-        df_coin.set_index('Date', inplace = True)
+#     for coin in crypto_data:
+#         # fit model
+#         df_coin = pd.DataFrame(crypto_data[coin])
+#         df_coin = df_coin[['Date','velocity']]
+#         df_coin.set_index('Date', inplace = True)
 
 
-        model = ARIMA(df_coin, order=(5,1,0))
-        model_fit = model.fit(disp=0)
-        print(model_fit.summary())
-        # plot residual errors
-        residuals = pd.DataFrame(model_fit.resid)
-        residuals.plot()
-        plt.show()
-        residuals.plot(kind='kde')
-        plt.xlabel(coin)
-        plt.show()
-        print(residuals.describe())
+#         model = ARIMA(df_coin, order=(5,1,0))
+#         model_fit = model.fit(disp=0)
+#         print(model_fit.summary())
+#         # plot residual errors
+#         residuals = pd.DataFrame(model_fit.resid)
+#         residuals.plot()
+#         plt.show()
+#         residuals.plot(kind='kde')
+#         plt.xlabel(coin)
+#         plt.show()
+#         print(residuals.describe())
     
     # for coin in crypto_data:
     #     df = pd.DataFrame(crypto_data[coin])
@@ -313,10 +327,10 @@ def mean_squared(crypto_data):
 
 
 def main():
-    data = loader('clean_crypto_data.csv')
+    # data = loader('clean_crypto_data.csv')
     # predict(data)
-    mean_squared(data)
-    X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size = load_data("Bitcoin Data.csv", 50)
+    # mean_squared(data)
+    X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size = load_data("Coinbase_btc.csv", 50)
     print(X_train.shape)
     print(Y_train.shape)
     print(X_test.shape)
@@ -325,7 +339,7 @@ def main():
     print(unnormalized_bases.shape)
     print(window_size)
 
-    model = initialize_model(window_size, 0.2, 'linear', 'mse', 'adam')
+    model = init_model(window_size, 0.2, 'linear', 'mse', 'adam',X_train)
     print(model.summary())
 
     model, training_time = fit_model(model, X_train, Y_train, 1024, 100, .05)
