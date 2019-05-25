@@ -1,6 +1,7 @@
 # Kaggle
 ## Keras for deep learning
-from keras.layers.core import Dense, Activation, Dropout
+import keras
+from keras.layers import Dense, Activation, Dropout
 from keras.layers.recurrent import LSTM
 from keras.layers import Bidirectional
 from keras.models import Sequential
@@ -217,46 +218,7 @@ def calculate_statistics(ture_pos,false_pos,true_neg,false_neg,y_predict,Y_test)
 
     return precision, recall, F1, MSE
 
-X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size = load_data("Bitcoin Data.csv", 50)
-print X_train.shape
-print Y_train.shape
-print X_test.shape
-print Y_test.shape
-print Y_daybefore.shape
-print unnormalized_bases.shape
-print window_size
 
-model = initialize_model(window_size, 0.2, 'linear', 'mse', 'adam')
-print model.summary()
-
-model, training_time = fit_model(model, X_train, Y_train, 1024, 100, .05)
-#Print the training time
-print "Training time", training_time, "seconds"
-
-
-y_predict, real_y_test, real_y_predict, fig1 = test_model(model, X_test, Y_test, unnormalized_bases)
-#Show the plot
-plt.show(fig1)
-
-Y_daybefore, Y_test, delta_predict, delta_real, fig2 = price_change(Y_daybefore, Y_test, y_predict)
-#Show the plot
-plt.show(fig2)
-
-delta_predict_1_0, delta_real_1_0 = binary_price(delta_predict, delta_real)
-print delta_predict_1_0.shape
-print delta_real_1_0.shape
-
-true_pos, false_pos, true_neg, false_neg = find_positives_negatives(delta_predict_1_0, delta_real_1_0)
-print "True positives:", true_pos
-print "False positives:", false_pos
-print "True negatives:", true_neg
-print "False negatives:", false_neg
-
-precision, recall, F1, MSE = calculate_statistics(true_pos, false_pos, true_neg, false_neg, y_predict, Y_test)
-print "Precision:", precision
-print "Recall:", recall
-print "F1 score:", F1
-print "Mean Squared Error:", MSE
 
 
 # End Kaggle
@@ -352,17 +314,48 @@ def mean_squared(crypto_data):
 
 def main():
     data = loader('clean_crypto_data.csv')
-
-    # parameters =  initialize_parameters(200*4*365,5,10)
-
     # predict(data)
     mean_squared(data)
-    # print(data)
+    X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size = load_data("Bitcoin Data.csv", 50)
+    print(X_train.shape)
+    print(Y_train.shape)
+    print(X_test.shape)
+    print(Y_test.shape)
+    print(Y_daybefore.shape)
+    print(unnormalized_bases.shape)
+    print(window_size)
+
+    model = initialize_model(window_size, 0.2, 'linear', 'mse', 'adam')
+    print(model.summary())
+
+    model, training_time = fit_model(model, X_train, Y_train, 1024, 100, .05)
+    #Print the training time
+    print("Training time", training_time, "seconds")
 
 
+    y_predict, real_y_test, real_y_predict, fig1 = test_model(model, X_test, Y_test, unnormalized_bases)
+    #Show the plot
+    plt.show(fig1)
 
+    Y_daybefore, Y_test, delta_predict, delta_real, fig2 = price_change(Y_daybefore, Y_test, y_predict)
+    #Show the plot
+    plt.show(fig2)
 
-    # print(data.head())
+    delta_predict_1_0, delta_real_1_0 = binary_price(delta_predict, delta_real)
+    print(delta_predict_1_0.shape)
+    print(delta_real_1_0.shape)
+
+    true_pos, false_pos, true_neg, false_neg = find_positives_negatives(delta_predict_1_0, delta_real_1_0)
+    print("True positives:", true_pos)
+    print("False positives:", false_pos)
+    print("True negatives:", true_neg)
+    print("False negatives:", false_neg)
+
+    precision, recall, F1, MSE = calculate_statistics(true_pos, false_pos, true_neg, false_neg, y_predict, Y_test)
+    print("Precision:", precision)
+    print("Recall:", recall)
+    print("F1 score:", F1)
+    print("Mean Squared Error:", MSE)
 
 if __name__ == '__main__':
     main()
