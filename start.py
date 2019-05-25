@@ -28,6 +28,7 @@ import pandas as pd
 # from fbprophet import Prophet
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn.metrics import mean_squared_error
+# from sklearn.metrics import mean
 
 def loader(infile):
     dataframe = pd.read_csv(infile, parse_dates=['Date'])
@@ -35,14 +36,14 @@ def loader(infile):
     crypto_data = {}
     # crypto_data["0x"] = dataframe.loc[dataframe["Currency"] == "0x"]
     crypto_data["bitcoin"] = dataframe.loc[dataframe["Currency"] == "bitcoin"]
-    crypto_data["ethereum"] = dataframe.loc[dataframe["Currency"] == "ethereum"]
-    crypto_data["ripple"] = dataframe.loc[dataframe["Currency"] == "ripple"]
-    crypto_data["litecoin"] = dataframe.loc[dataframe["Currency"] == "litecoin"]
-    crypto_data["eos"] = dataframe.loc[dataframe["Currency"] == "eos"]
-    crypto_data["bitcoin-cash"] = dataframe.loc[dataframe["Currency"] == "bitcoin-cash"]
-    crypto_data["tron"] = dataframe.loc[dataframe["Currency"] == "tron"]
-    crypto_data["stellar"] = dataframe.loc[dataframe["Currency"] == "stellar"]
-    crypto_data["binance-coin"] = dataframe.loc[dataframe["Currency"] == "binance-coin"]
+    # crypto_data["ethereum"] = dataframe.loc[dataframe["Currency"] == "ethereum"]
+    # crypto_data["ripple"] = dataframe.loc[dataframe["Currency"] == "ripple"]
+    # crypto_data["litecoin"] = dataframe.loc[dataframe["Currency"] == "litecoin"]
+    # crypto_data["eos"] = dataframe.loc[dataframe["Currency"] == "eos"]
+    # crypto_data["bitcoin-cash"] = dataframe.loc[dataframe["Currency"] == "bitcoin-cash"]
+    # crypto_data["tron"] = dataframe.loc[dataframe["Currency"] == "tron"]
+    # crypto_data["stellar"] = dataframe.loc[dataframe["Currency"] == "stellar"]
+    # crypto_data["binance-coin"] = dataframe.loc[dataframe["Currency"] == "binance-coin"]
 
 
 
@@ -109,7 +110,8 @@ def mean_squared(crypto_data):
             obs = test[t]
             history.append(obs)
             #print('predicted=%f, expected=%f' % (yhat, obs))
-        error = mean_squared_error(test, predictions)
+        newError = mean_squared_error(test, predictions)
+        error = rmse(predictions,test)
         print('Test MSE: %.3f' % error)
         # plot
         plt.plot(test)
@@ -118,6 +120,8 @@ def mean_squared(crypto_data):
         plt.show()
 
 
+def rmse(predictions, targets):
+    return np.sqrt(((predictions - targets) ** 2).mean())
 def main():
     data = loader('clean_crypto_data.csv')
 

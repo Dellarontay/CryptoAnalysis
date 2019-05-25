@@ -27,9 +27,15 @@ import pandas as pd
 
 def load_data(filename, sequence_length):
      #Read the data file
-    raw_data = pd.read_csv(filename).values
-    print(raw_data.shape[0])
-    print(raw_data.shape[1])
+    raw_data = pd.read_csv(filename)
+    
+    train_x = raw_data.drop(['Symbol','High','Low','Volume USD','Open','Close'],axis=1).values
+    # print(raw_data)
+    # input("wait")
+    train_y =  raw_data.drop(['Symbol','Low','Volume BTC','Volume USD','Open','Close'],axis=1).values
+
+    print(train_x.shape)
+    print(train_y.shape)
     # input("wait")
     # for data in raw_data:
     #     formed_data = str(data).strip("[]").split()
@@ -40,13 +46,13 @@ def load_data(filename, sequence_length):
         # input("wait")
 
     #Change all zeros to the number before the zero occurs
-    for x in range(0, raw_data.shape[0]):
-        for y in range(0, raw_data.shape[1]):
-            if(raw_data[x][y] == 0):
-                raw_data[x][y] = raw_data[x-1][y]
+    # for x in range(0, raw_data.shape[0]):
+    #     for y in range(0, raw_data.shape[1]):
+    #         if(raw_data[x][y] == 0):
+    #             raw_data[x][y] = raw_data[x-1][y]
     
     #Convert the file to a list
-    data = raw_data.tolist()
+    data = train_x.tolist()
     
     #Convert the data to a 3D array (a x b x c) 
     #Where a is the number of days, b is the window size, and c is the number of features in the data file
@@ -59,7 +65,10 @@ def load_data(filename, sequence_length):
     #Every value in the window is divided by the first value in the window, and then 1 is subtracted
     d0 = np.array(result)
     dr = np.zeros_like(d0)
-    # dr[:,1:,:] = d0[:,1:,:] / d0[:,0:1,:] - 1
+    print(d0)
+    print(dr.shape)
+    # input("wait")
+    # dr[:,1:] = d0[:,1:] / d0[:,0:1] - 1
     
     #Keeping the unnormalized prices for Y_test
     #Useful when graphing bitcoin price over time later
@@ -69,15 +78,16 @@ def load_data(filename, sequence_length):
     
     #Splitting data set into training (First 90% of data points) and testing data (last 10% of data points)
     split_line = round(0.9 * dr.shape[0])
-    training_data = dr[:int(split_line), :]
+    training_data = train_x[:int(split_line), :]
+    training_data_y = train_y[:int(split_line),:]
     
     #Shuffle the data
     np.random.shuffle(training_data)
     
     #Training Data
     X_train = training_data[:, :-1]
-    Y_train = training_data[:, -1]
-    Y_train = Y_train[:, 7]
+    Y_train = y_train
+    # Y_train = Y_train[:, 7]
     
     #Testing data
     X_test = dr[int(split_line):, :-1]
