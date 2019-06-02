@@ -363,7 +363,7 @@ def loadData2(filename,window_length):
 
     X_train = np.reshape(training_set,(training_set.shape[0],1,training_set.shape[1]))
     y_train = np.reshape(training_setY,(training_setY.shape[0],training_setY.shape[1]))
-    X_test = np.reshape(X_test,(X_test.shape[0],X_test.shape[1]))
+    X_test = np.reshape(X_test,(X_test.shape[0],1,X_test.shape[1]))
     Y_test = np.reshape(Y_test,(Y_test.shape[0],Y_test.shape[1]))
     # X_train = np.reshape(X_train,len(X_train), 1, 1)
     # y_train = np.reshape(y_train,(y_train))
@@ -372,26 +372,26 @@ def loadData2(filename,window_length):
     regressor = Sequential()
 
     # Adding the input layer and the LSTM layer
-    regressor.add(LSTM(units = 4, activation = 'sigmoid', input_shape = (1,2)))
+    regressor.add(LSTM(units = 4, activation = 'sigmoid', input_shape = (None,2)))
 
     # Adding the output layer
     regressor.add(Dense(units = 1))
 
     # Compiling the RNN
-    regressor.compile(optimizer = 'adam', loss = 'mse')
+    regressor.compile(optimizer = 'adam', loss = 'mse',metrics=["accuracy"])
     # def test_model(model, X_test,Y_test,unnormalized_bases):
 
     regressor.summary()
     print('Training')
     BATCH_SIZE=64
-    EPOCHS = 50
-    regressor.fit([x, xq], y,
+    EPOCHS = 200
+    regressor.fit([X_train], y_train,
             batch_size=BATCH_SIZE,
             epochs=EPOCHS,
             validation_split=0.05)
 
     print('Evaluation')
-    loss, acc = regressor.evaluate([tx, txq], ty,
+    loss, acc = regressor.evaluate([X_test], Y_test,
                             batch_size=BATCH_SIZE)
     print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
     # test_model(regressor,X_test,Y_test,unnormalized_bases)
@@ -400,7 +400,20 @@ def loadData2(filename,window_length):
     # Fitting the RNN to the Training set
     # regressor.fit(X_train, y_train, batch_size = 5, epochs = 100)
     # def fit_model(model,X_train,Y_train,batch_num,num_epoch,val_split):
-    return fit_model(regressor,X_train,y_train,BATCH_SIZE,EPOCHS,.9)
+    # make predictions
+    trainPredict = regressor.predict(X_train)
+    testPredict = regressor.predict(X_test)
+    # invert predictions
+    trainPredict = scaler.inverse_transform(trainPredict)
+    trainY = scaler.inverse_transform([y_train])
+    testPredict = scaler.inverse_transform(testPredict)
+    testY = scaler.inverse_transform([Y_test])
+    # calculate root mean squared error
+    trainScore = math.sqrt(mean_squared_error(trainY[0], trainPredict[:,0]))
+    print('Train Score: %.2f RMSE' % (trainScore))
+    testScore = math.sqrt(mean_squared_error(testY[0], testPredict[:,0]))
+    print('Test Score: %.2f RMSE' % (testScore))
+    return fit_model(regressor,X_train,y_train,BATCH_SIZE,1,.9)
 
 def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
