@@ -401,6 +401,8 @@ def loadData2(filename,window_length):
     # regressor.fit(X_train, y_train, batch_size = 5, epochs = 100)
     # def fit_model(model,X_train,Y_train,batch_num,num_epoch,val_split):
     # make predictions
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    dataset = scaler.fit_transform(training_data)
     trainPredict = regressor.predict(X_train)
     testPredict = regressor.predict(X_test)
     # invert predictions
