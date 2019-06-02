@@ -1,12 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
-# import scipy
-# from scipy import ndimage
 
-from PIL import Image
-# from lr_utils import load_dataset
-# %matplotlib inline
 from keras import layers
 from keras.layers import Input, Add, Dense, Activation, ZeroPadding2D, BatchNormalization, Flatten, Conv2D, AveragePooling2D, MaxPooling2D, GlobalMaxPooling2D
 from keras.models import Model, load_model
@@ -14,8 +9,6 @@ from keras.preprocessing import image
 from keras.utils import layer_utils
 from keras.utils.data_utils import get_file
 from keras.applications.imagenet_utils import preprocess_input
-import pydot
-from IPython.display import SVG
 from keras.utils.vis_utils import model_to_dot
 from keras.utils import plot_model
 # from resnets_utils import *
@@ -56,13 +49,14 @@ def predict(crypto_data):
     for coin in crypto_data:
         # fit model
         df_coin = pd.DataFrame(crypto_data[coin])
-        df_coin = df_coin[['Date','velocity']]
+        df_coin = df_coin[['Date','average price']]
         df_coin.set_index('Date', inplace = True)
 
 
         model = ARIMA(df_coin, order=(5,1,0))
         model_fit = model.fit(disp=0)
         print(model_fit.summary())
+        print(coin)
         # plot residual errors
         residuals = pd.DataFrame(model_fit.resid)
         residuals.plot()
@@ -91,7 +85,7 @@ def mean_squared(crypto_data):
     for coin in crypto_data:
 
         df_coin = pd.DataFrame(crypto_data[coin])
-        df_coin = df_coin[['Date','velocity']]
+        df_coin = df_coin[['Date','average price']]
         df_coin.set_index('Date', inplace = True)
         X = df_coin.values
         # print(X)
@@ -110,9 +104,9 @@ def mean_squared(crypto_data):
             obs = test[t]
             history.append(obs)
             #print('predicted=%f, expected=%f' % (yhat, obs))
-        newError = mean_squared_error(test, predictions)
+        # newError = mean_squared_error(test, predictions)
         error = rmse(predictions,test)
-        print('Test MSE: %.3f' % error)
+        print('Test MSE: %.3f with predictions in red' % error)
         # plot
         plt.plot(test)
         plt.plot(predictions, color='red')
@@ -122,13 +116,14 @@ def mean_squared(crypto_data):
 
 def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
+
 def main():
     data = loader('clean_crypto_data.csv')
 
     # parameters =  initialize_parameters(200*4*365,5,10)
 
-    # predict(data)
-    mean_squared(data)
+    predict(data)
+    # mean_squared(data)
     # print(data)
 
 

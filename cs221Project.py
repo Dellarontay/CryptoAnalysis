@@ -29,13 +29,12 @@ def load_data(filename, sequence_length):
      #Read the data file
     raw_data = pd.read_csv(filename)
     
-    train_x = raw_data.drop(['Symbol','High','Low','Volume USD','Open','Close'],axis=1).values
+    training_data = raw_data.drop(['Symbol','Low','Volume USD','Open','Close'],axis=1)
+    # train_x = raw_data.drop(['Symbol','High','Low','Volume USD','Open','Close'],axis=1).values
     # print(raw_data)
     # input("wait")
-    train_y =  raw_data.drop(['Symbol','Low','Volume BTC','Volume USD','Open','Close'],axis=1).values
+    # train_y =  raw_data.drop(['Symbol','Low','Volume BTC','Volume USD','Open','Close'],axis=1).values
 
-    print(train_x.shape)
-    print(train_y.shape)
     # input("wait")
     # for data in raw_data:
     #     formed_data = str(data).strip("[]").split()
@@ -52,7 +51,7 @@ def load_data(filename, sequence_length):
     #             raw_data[x][y] = raw_data[x-1][y]
     
     #Convert the file to a list
-    data = train_x.tolist()
+    # data = training_data.tolist()
     
     #Convert the data to a 3D array (a x b x c) 
     #Where a is the number of days, b is the window size, and c is the number of features in the data file
@@ -65,10 +64,10 @@ def load_data(filename, sequence_length):
     #Every value in the window is divided by the first value in the window, and then 1 is subtracted
     d0 = np.array(result)
     dr = np.zeros_like(d0)
-    print(d0)
-    print(dr.shape)
+    # print(d0)
+    # print(dr.shape)
     # input("wait")
-    # dr[:,1:] = d0[:,1:] / d0[:,0:1] - 1
+    dr[:,1:] = d0[:,1:] / d0[:,0:1] - 1
     
     #Keeping the unnormalized prices for Y_test
     #Useful when graphing bitcoin price over time later
@@ -78,8 +77,8 @@ def load_data(filename, sequence_length):
     
     #Splitting data set into training (First 90% of data points) and testing data (last 10% of data points)
     split_line = round(0.9 * dr.shape[0])
-    training_data = train_x[:int(split_line), :]
-    training_data_y = train_y[:int(split_line),:]
+    training_data = dr[:int(split_line), :]
+    training_data_y = dr[:int(split_line),:]
     
     #Shuffle the data
     np.random.shuffle(training_data)
@@ -109,7 +108,7 @@ def init_model(window_size,dropout_value,activation_function,loss_function,optim
     model = Sequential()
 
     #First recurrent layer with dropout
-    model.add(Bidirectional(LSTM(window_size, return_sequences=True), input_shape=(window_size, X_train.shape[-1]),))
+    model.add(Bidirectional(LSTM(window_size, return_sequences=True), input_shape=(window_size, X_train.shape[-1])))
     model.add(Dropout(dropout_value))
 
     #Second recurrent layer with dropout
@@ -233,7 +232,7 @@ def find_false_positives(delta_predict_1_0,delta_real_1_0):
                 false_pos += 1
     return true_pos, false_pos, true_neg, false_neg
 
-def calculate_statistics(ture_pos,false_pos,true_neg,false_neg,y_predict,Y_test):
+def calculate_statistics(true_pos,false_pos,true_neg,false_neg,y_predict,Y_test):
     precision = float(true_pos) / (true_pos + false_pos)
     recall = float(true_pos) / (true_pos + false_neg)
     F1 = float(2 * precision * recall) / (precision + recall)
@@ -335,51 +334,126 @@ def mean_squared(crypto_data):
         plt.xlabel(coin)
         plt.show()
 
+def loadData2(filename,window_length):
+    raw_data = pd.read_csv(filename)
+    
+    training_data = raw_data.drop(['Symbol','Low','Volume USD','Open','Close','Date'],axis=1)
+    training_data2 = raw_data.drop(['Symbol','Low','Volume USD','Open','Close','Date','Volume BTC'],axis=1)
+    training = training_data.values
+    split = int(len(training)*.9)
+    newTrain = training[:split]
+    newTest = training[split:]
+    newTrainY = training_data2[:split]
+    newTestY = training_data2[split:]
+    unnormalized_bases = newTest[:newTest.shape[0],0:1]
+
+
+    # Data preprocess
+    training_set = newTrain
+    training_setY = newTrainY
+    # training_set = np.reshape(training_set, (len(training_set), 1))
+    from sklearn.preprocessing import MinMaxScaler
+    sc = MinMaxScaler()
+    training_set = sc.fit_transform(training_set)
+    training_setY = sc.fit_transform(training_setY)
+    X_test = sc.fit_transform(newTest)
+    Y_test = sc.fit_transform(newTestY)
+
+
+
+    X_train = np.reshape(training_set,(training_set.shape[0],1,training_set.shape[1]))
+    y_train = np.reshape(training_setY,(training_setY.shape[0],training_setY.shape[1]))
+    X_test = np.reshape(X_test,(X_test.shape[0],X_test.shape[1]))
+    Y_test = np.reshape(Y_test,(Y_test.shape[0],Y_test.shape[1]))
+    # X_train = np.reshape(X_train,len(X_train), 1, 1)
+    # y_train = np.reshape(y_train,(y_train))
+
+    # Initialising the RNN
+    regressor = Sequential()
+
+    # Adding the input layer and the LSTM layer
+    regressor.add(LSTM(units = 4, activation = 'sigmoid', input_shape = (1,2)))
+
+    # Adding the output layer
+    regressor.add(Dense(units = 1))
+
+    # Compiling the RNN
+    regressor.compile(optimizer = 'adam', loss = 'mse')
+    # def test_model(model, X_test,Y_test,unnormalized_bases):
+
+    regressor.summary()
+    print('Training')
+    BATCH_SIZE=64
+    EPOCHS = 50
+    regressor.fit([x, xq], y,
+            batch_size=BATCH_SIZE,
+            epochs=EPOCHS,
+            validation_split=0.05)
+
+    print('Evaluation')
+    loss, acc = regressor.evaluate([tx, txq], ty,
+                            batch_size=BATCH_SIZE)
+    print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
+    # test_model(regressor,X_test,Y_test,unnormalized_bases)
+    # regressor = init_model(window_length, 0.2, 'linear', 'mse', 'adam',X_train)
+
+    # Fitting the RNN to the Training set
+    # regressor.fit(X_train, y_train, batch_size = 5, epochs = 100)
+    # def fit_model(model,X_train,Y_train,batch_num,num_epoch,val_split):
+    return fit_model(regressor,X_train,y_train,BATCH_SIZE,EPOCHS,.9)
+
+def rmse(predictions, targets):
+    return np.sqrt(((predictions - targets) ** 2).mean())
 
 def main():
     # data = loader('clean_crypto_data.csv')
     # predict(data)
     # mean_squared(data)
-    X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size = load_data("Coinbase_btc.csv", 50)
-    print(X_train.shape)
-    print(Y_train.shape)
-    print(X_test.shape)
-    print(Y_test.shape)
-    print(Y_daybefore.shape)
-    print(unnormalized_bases.shape)
-    print(window_size)
+    # X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size = load_data("Coinbase_btc.csv", 50)
+    # print(X_train.shape)
+    # print(Y_train.shape)
+    # print(X_test.shape)
+    # print(Y_test.shape)
+    # print(Y_daybefore.shape)
+    # print(unnormalized_bases.shape)
+    # print(window_size)
 
-    model = init_model(window_size, 0.2, 'linear', 'mse', 'adam',X_train)
-    print(model.summary())
+    # model = init_model(window_size, 0.2, 'linear', 'mse', 'adam',X_train)
+    # print(model.summary())
 
-    model, training_time = fit_model(model, X_train, Y_train, 1024, 100, .05)
-    #Print the training time
-    print("Training time", training_time, "seconds")
+    # model, training_time = fit_model(model, X_train, Y_train, 1024, 100, .05)
+    # #Print the training time
+    # print("Training time", training_time, "seconds")
 
 
-    y_predict, real_y_test, real_y_predict, fig1 = test_model(model, X_test, Y_test, unnormalized_bases)
-    #Show the plot
-    plt.show(fig1)
+    # y_predict, real_y_test, real_y_predict, fig1 = test_model(model, X_test, Y_test, unnormalized_bases)
+    # #Show the plot
+    # plt.show(fig1)
 
-    Y_daybefore, Y_test, delta_predict, delta_real, fig2 = price_change(Y_daybefore, Y_test, y_predict)
-    #Show the plot
-    plt.show(fig2)
+    # Y_daybefore, Y_test, delta_predict, delta_real, fig2 = price_change(Y_daybefore, Y_test, y_predict)
+    # #Show the plot
+    # plt.show(fig2)
 
-    delta_predict_1_0, delta_real_1_0 = binary_price(delta_predict, delta_real)
-    print(delta_predict_1_0.shape)
-    print(delta_real_1_0.shape)
+    # delta_predict_1_0, delta_real_1_0 = binary_price(delta_predict, delta_real)
+    # print(delta_predict_1_0.shape)
+    # print(delta_real_1_0.shape)
 
-    true_pos, false_pos, true_neg, false_neg = find_positives_negatives(delta_predict_1_0, delta_real_1_0)
-    print("True positives:", true_pos)
-    print("False positives:", false_pos)
-    print("True negatives:", true_neg)
-    print("False negatives:", false_neg)
+    # true_pos, false_pos, true_neg, false_neg = find_positives_negatives(delta_predict_1_0, delta_real_1_0)
+    # print("True positives:", true_pos)
+    # print("False positives:", false_pos)
+    # print("True negatives:", true_neg)
+    # print("False negatives:", false_neg)
 
-    precision, recall, F1, MSE = calculate_statistics(true_pos, false_pos, true_neg, false_neg, y_predict, Y_test)
-    print("Precision:", precision)
-    print("Recall:", recall)
-    print("F1 score:", F1)
-    print("Mean Squared Error:", MSE)
+    # precision, recall, F1, MSE = calculate_statistics(true_pos, false_pos, true_neg, false_neg, y_predict, Y_test)
+    # print("Precision:", precision)
+    # print("Recall:", recall)
+    # print("F1 score:", F1)
+    # print("Mean Squared Error:", MSE)
+    hi = "high"
+    model, training_time = loadData2("Coinbase_btc.csv",50)
+    
+
+
 
 if __name__ == '__main__':
     main()
