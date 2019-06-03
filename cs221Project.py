@@ -25,6 +25,14 @@ import matplotlib.pyplot as plt
 ##data processing
 import pandas as pd
 
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
+
+from keras.utils import plot_model
+
+
+
+
 def load_data(filename, sequence_length):
      #Read the data file
     raw_data = pd.read_csv(filename)
@@ -85,7 +93,7 @@ def load_data(filename, sequence_length):
     
     #Training Data
     X_train = training_data[:, :-1]
-    Y_train = y_train
+    Y_train = Y_train
     # Y_train = Y_train[:, 7]
     
     #Testing data
@@ -105,10 +113,13 @@ def load_data(filename, sequence_length):
 
 def init_model(window_size,dropout_value,activation_function,loss_function,optimizer,X_train):
      #Create a Sequential model using Keras
+       # Initialising the RNN
     model = Sequential()
 
+    # Adding the output layer
+    # model.add(Dense(1,activation='tanh'))
     #First recurrent layer with dropout
-    model.add(Bidirectional(LSTM(window_size, return_sequences=True), input_shape=(window_size, X_train.shape[-1])))
+    model.add(Bidirectional(LSTM(window_size, return_sequences=True), input_shape=(X_train.shape[1], X_train.shape[2])))
     model.add(Dropout(dropout_value))
 
     #Second recurrent layer with dropout
@@ -125,7 +136,7 @@ def init_model(window_size,dropout_value,activation_function,loss_function,optim
     model.add(Activation(activation_function))
 
     #Set loss function and optimizer
-    model.compile(loss=loss_function, optimizer=optimizer)
+    model.compile(loss=loss_function, optimizer=optimizer,metrics=["mse"])
     
     return model
 
@@ -252,187 +263,134 @@ def loader(infile):
     crypto_data = {}
     # crypto_data["0x"] = dataframe.loc[dataframe["Currency"] == "0x"]
     crypto_data["bitcoin"] = dataframe.loc[dataframe["Currency"] == "bitcoin"]
-    # crypto_data["ethereum"] = dataframe.loc[dataframe["Currency"] == "ethereum"]
-    # crypto_data["ripple"] = dataframe.loc[dataframe["Currency"] == "ripple"]
-    # crypto_data["litecoin"] = dataframe.loc[dataframe["Currency"] == "litecoin"]
-    # crypto_data["eos"] = dataframe.loc[dataframe["Currency"] == "eos"]
-    # crypto_data["bitcoin-cash"] = dataframe.loc[dataframe["Currency"] == "bitcoin-cash"]
-    # crypto_data["tron"] = dataframe.loc[dataframe["Currency"] == "tron"]
-    # crypto_data["stellar"] = dataframe.loc[dataframe["Currency"] == "stellar"]
-    # crypto_data["binance-coin"] = dataframe.loc[dataframe["Currency"] == "binance-coin"]
-
-
-
-
     # bitcoin,ethereum,ripple,litecoin,eos,bitcoin-cash,tron,stellar,binance-coin
     return crypto_data
 
-# def predict(crypto_data):
 
-#     for coin in crypto_data:
-#         # fit model
-#         df_coin = pd.DataFrame(crypto_data[coin])
-#         df_coin = df_coin[['Date','velocity']]
-#         df_coin.set_index('Date', inplace = True)
+def plotTrainingInfo(history):
+    # Plot training Details
+    # Plot MSE values
+    plt.plot(history.history['mean_squared_error'])
+    plt.plot(history.history['val_mean_squared_error'])
 
+    plt.title('MSE')
+    plt.ylabel('MSE')
+    plt.xlabel('Epoch')
+    plt.legend(['MSE',"Val MSE"], loc='upper left')
+    plt.show()
 
-#         model = ARIMA(df_coin, order=(5,1,0))
-#         model_fit = model.fit(disp=0)
-#         print(model_fit.summary())
-#         # plot residual errors
-#         residuals = pd.DataFrame(model_fit.resid)
-#         residuals.plot()
-#         plt.show()
-#         residuals.plot(kind='kde')
-#         plt.xlabel(coin)
-#         plt.show()
-#         print(residuals.describe())
+    # Plot training & validation loss values
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
+
+def plotFeatures(features,targets,featureList,targetList):
+    plt.plot(features)
+    plt.title('Features')
+    plt.xlabel("Feature Value")
+    plt.ylabel('Days')
+    plt.legend(featureList,loc='upper left')
+    plt.show()
     
-    # for coin in crypto_data:
-    #     df = pd.DataFrame(crypto_data[coin])
-    #     temp_df = pd.DataFrame()
-    #     temp_df['ds'] = df['Date']
-    #     temp_df['y'] = df['Close']
-    #     temp_df['ds'] = temp_df['ds'].dt.to_pydatetime()
-    #     model = Prophet()
-    #     model.fit(temp_df)
-    #     future = model.make_future_dataframe(periods = 60)
-    #     forecast = model.predict(future)
-    #     title_str = "predicted value of "+ coin
-    #     model.plot(forecast, uncertainty=False)
-    #     model.plot_components(forecast, uncertainty=False)
-    # pass
+    plt.plot(targets)
+    plt.title('Target Values')
+    plt.xlabel("Days")
+    plt.ylabel('Target Value')
+    plt.legend(targetList,loc='upper left')
+    plt.show()
 
-def mean_squared(crypto_data):
-    for coin in crypto_data:
-
-        df_coin = pd.DataFrame(crypto_data[coin])
-        df_coin = df_coin[['Date','velocity']]
-        df_coin.set_index('Date', inplace = True)
-        X = df_coin.values
-        # print(X)
-        # input('here')
-        size = int(len(X) * 0.80)
-        train, test = X[0:size], X[size:len(X)]
-        history = [x for x in train]
-        predictions = list()
-
-        for t in range(len(test)):
-            model = ARIMA(history, order=(5,1,0))
-            model_fit = model.fit(disp=0)
-            output = model_fit.forecast()
-            yhat = output[0]
-            predictions.append(yhat)
-            obs = test[t]
-            history.append(obs)
-            #print('predicted=%f, expected=%f' % (yhat, obs))
-        error = mean_squared_error(test, predictions)
-        print('Test MSE: %.3f' % error)
-        # plot
-        plt.plot(test)
-        plt.plot(predictions, color='red')
-        plt.xlabel(coin)
-        plt.show()
 
 def loadData2(filename,window_length):
-    raw_data = pd.read_csv(filename)
+    raw_data = pd.read_csv(filename,header=0)
+    # print(filename)
     
-    training_data = raw_data.drop(['Symbol','Low','Volume USD','Open','Close','Date'],axis=1)
-    training_data2 = raw_data.drop(['Symbol','Low','Volume USD','Open','Close','Date','Volume BTC'],axis=1)
+    # training_data = raw_data[['High','Volume BTC']]
+    # training_dataY = raw_data['High']
+    training_data = raw_data[['average price','velocity']]
+    training_dataY = raw_data[['average price']]
+    # plotFeatures(training_data[:],training_dataY[:],['average price','velocity'],['average price'])
+
+    
     training = training_data.values
     split = int(len(training)*.9)
-    newTrain = training[:split]
-    newTest = training[split:]
-    newTrainY = training_data2[:split]
-    newTestY = training_data2[split:]
-    unnormalized_bases = newTest[:newTest.shape[0],0:1]
-
-
     # Data preprocess
-    training_set = newTrain
-    training_setY = newTrainY
-    # training_set = np.reshape(training_set, (len(training_set), 1))
-    from sklearn.preprocessing import MinMaxScaler
-    sc = MinMaxScaler()
-    training_set = sc.fit_transform(training_set)
-    training_setY = sc.fit_transform(training_setY)
-    X_test = sc.fit_transform(newTest)
-    Y_test = sc.fit_transform(newTestY)
+    X_train = training[:split]
+    X_test = training[split:]
+    Y_train = training_dataY[:split]
+    Y_test = training_dataY[split:]
+    origY_Test= Y_test
 
+    # unnormalized_bases = newTest[:newTest.shape[0],0:1]
 
+    sc = MinMaxScaler() #Normalize to 1
+    # sc = StandardScaler()
 
-    X_train = np.reshape(training_set,(training_set.shape[0],1,training_set.shape[1]))
-    y_train = np.reshape(training_setY,(training_setY.shape[0],training_setY.shape[1]))
+    X_train = sc.fit_transform(X_train)
+    Y_train = sc.fit_transform(Y_train)
+    X_test = sc.fit_transform(X_test)
+    Y_test = sc.fit_transform(Y_test)
+
+    # plotFeatures(X_train[:],Y_train[:],['average price','velocity'],['average price'])
+
+    X_train = np.reshape(X_train,(X_train.shape[0],1,X_train.shape[1]))
+    Y_train = np.reshape(Y_train,(Y_train.shape[0],Y_train.shape[1]))
     X_test = np.reshape(X_test,(X_test.shape[0],1,X_test.shape[1]))
     Y_test = np.reshape(Y_test,(Y_test.shape[0],Y_test.shape[1]))
-    # X_train = np.reshape(X_train,len(X_train), 1, 1)
-    # y_train = np.reshape(y_train,(y_train))
 
-    # Initialising the RNN
-    regressor = Sequential()
-
-    # Adding the input layer and the LSTM layer
-    regressor.add(LSTM(units = 4, activation = 'sigmoid', input_shape = (None,2)))
-
-    # Adding the output layer
-    regressor.add(Dense(units = 1))
-
-    # Compiling the RNN
-    regressor.compile(optimizer = 'adam', loss = 'mse',metrics=["accuracy"])
-    # def test_model(model, X_test,Y_test,unnormalized_bases):
-
+    regressor = init_model(window_length, 0.2, 'tanh', 'mse', 'adam',X_train)
     regressor.summary()
+
     print('Training')
     BATCH_SIZE=64
-    EPOCHS = 200
-    regressor.fit([X_train], y_train,
+    EPOCHS = 75
+    history = regressor.fit([X_train], Y_train,
             batch_size=BATCH_SIZE,
             epochs=EPOCHS,
             validation_split=0.05)
 
+    plotTrainingInfo(history)
+
     print('Evaluation')
-    loss, acc = regressor.evaluate([X_test], Y_test,
+    loss, mse = regressor.evaluate([X_test], Y_test,
                             batch_size=BATCH_SIZE)
-    print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
-    # test_model(regressor,X_test,Y_test,unnormalized_bases)
-    # regressor = init_model(window_length, 0.2, 'linear', 'mse', 'adam',X_train)
+    print('Test loss / test mse = {:.4f} / {:.4f}'.format(loss, mse))
 
     # Fitting the RNN to the Training set
-    # regressor.fit(X_train, y_train, batch_size = 5, epochs = 100)
+    # regressor.fit(X_train, Y_train, batch_size = 5, epochs = 100)
     # def fit_model(model,X_train,Y_train,batch_num,num_epoch,val_split):
     # make predictions
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    dataset = scaler.fit_transform(training_data)
-    trainPredict = regressor.predict(X_train)
+    # scaler = MinMaxScaler(feature_range=(0, 1))
+    # dataset = scaler.fit_transform(training_data)
+    # trainPredict = regressor.predict(X_train)
+    # standard_scalerX.fit(X_test)
+    # X_test_std = standard_scalerX.transform(X_test)
+    # X_test_std = X_test_std.astype('float32')
     testPredict = regressor.predict(X_test)
+    testPredict = sc.inverse_transform(testPredict)
+    Y_test = origY_Test
     # invert predictions
-    trainPredict = scaler.inverse_transform(trainPredict)
-    trainY = scaler.inverse_transform([y_train])
-    testPredict = scaler.inverse_transform(testPredict)
-    testY = scaler.inverse_transform([Y_test])
+    # trainPredict2 = scaler.inverse_transform(trainPredict)
+    # trainY = scaler.inverse_transform([Y_train])
+    # testPredict = scaler.inverse_transform(testPredict)
+    # testY = scaler.inverse_transform([Y_test])
     # calculate root mean squared error
-    trainScore = math.sqrt(mean_squared_error(trainY[0], trainPredict[:,0]))
-    print('Train Score: %.2f RMSE' % (trainScore))
-    testScore = math.sqrt(mean_squared_error(testY[0], testPredict[:,0]))
+    # trainScore = math.sqrt(mean_squared_error(Y_train[0], trainPredict2[:,0]))
+    # print('Train Score: %.2f RMSE' % (trainScore))
+    testScore = math.sqrt(mean_squared_error(Y_test[:], testPredict[:]))
     print('Test Score: %.2f RMSE' % (testScore))
-    return fit_model(regressor,X_train,y_train,BATCH_SIZE,1,.9)
+    
+    return regressor,testScore
+
 
 def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
 
 def main():
     # data = loader('clean_crypto_data.csv')
-    # predict(data)
-    # mean_squared(data)
-    # X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size = load_data("Coinbase_btc.csv", 50)
-    # print(X_train.shape)
-    # print(Y_train.shape)
-    # print(X_test.shape)
-    # print(Y_test.shape)
-    # print(Y_daybefore.shape)
-    # print(unnormalized_bases.shape)
-    # print(window_size)
-
     # model = init_model(window_size, 0.2, 'linear', 'mse', 'adam',X_train)
     # print(model.summary())
 
@@ -464,8 +422,9 @@ def main():
     # print("Recall:", recall)
     # print("F1 score:", F1)
     # print("Mean Squared Error:", MSE)
-    hi = "high"
-    model, training_time = loadData2("Coinbase_btc.csv",50)
+    model, training_time = loadData2("btc_spec.csv",50)
+    # plot_model(model, to_file='model.png')
+
     
 
 
