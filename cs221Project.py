@@ -31,100 +31,18 @@ from sklearn.preprocessing import StandardScaler
 from keras.utils import plot_model
 
 
-
-
-def load_data(filename, sequence_length):
-     #Read the data file
-    raw_data = pd.read_csv(filename)
-    
-    training_data = raw_data.drop(['Symbol','Low','Volume USD','Open','Close'],axis=1)
-    # train_x = raw_data.drop(['Symbol','High','Low','Volume USD','Open','Close'],axis=1).values
-    # print(raw_data)
-    # input("wait")
-    # train_y =  raw_data.drop(['Symbol','Low','Volume BTC','Volume USD','Open','Close'],axis=1).values
-
-    # input("wait")
-    # for data in raw_data:
-    #     formed_data = str(data).strip("[]").split()
-        # datetime_object = datetime.strptime(formed_data[0]., "%Y-%m-%d")
-
-        # print(datetime_object)
-
-        # input("wait")
-
-    #Change all zeros to the number before the zero occurs
-    # for x in range(0, raw_data.shape[0]):
-    #     for y in range(0, raw_data.shape[1]):
-    #         if(raw_data[x][y] == 0):
-    #             raw_data[x][y] = raw_data[x-1][y]
-    
-    #Convert the file to a list
-    # data = training_data.tolist()
-    
-    #Convert the data to a 3D array (a x b x c) 
-    #Where a is the number of days, b is the window size, and c is the number of features in the data file
-    result = []
-    for index in range(len(data) - sequence_length):
-        result.append(data[index: index + sequence_length])
-  
-    
-    #Normalizing data by going through each window
-    #Every value in the window is divided by the first value in the window, and then 1 is subtracted
-    d0 = np.array(result)
-    dr = np.zeros_like(d0)
-    # print(d0)
-    # print(dr.shape)
-    # input("wait")
-    dr[:,1:] = d0[:,1:] / d0[:,0:1] - 1
-    
-    #Keeping the unnormalized prices for Y_test
-    #Useful when graphing bitcoin price over time later
-    start = 2400
-    end = int(dr.shape[0] + 1)
-    unnormalized_bases = d0[start:end,0:1,:]
-    
-    #Splitting data set into training (First 90% of data points) and testing data (last 10% of data points)
-    split_line = round(0.9 * dr.shape[0])
-    training_data = dr[:int(split_line), :]
-    training_data_y = dr[:int(split_line),:]
-    
-    #Shuffle the data
-    np.random.shuffle(training_data)
-    
-    #Training Data
-    X_train = training_data[:, :-1]
-    Y_train = Y_train
-    # Y_train = Y_train[:, 7]
-    
-    #Testing data
-    X_test = dr[int(split_line):, :-1]
-    Y_test = dr[int(split_line):, 49, :]
-    Y_test = Y_test[:, 7]
-
-    #Get the day before Y_test's price
-    Y_daybefore = dr[int(split_line):, 48, :]
-    Y_daybefore = Y_daybefore[:, 7]
-    
-    #Get window size and sequence length
-    sequence_length = sequence_length
-    window_size = sequence_length - 1 #because the last value is reserved as the y value
-    
-    return X_train, Y_train, X_test, Y_test, Y_daybefore, unnormalized_bases, window_size
-
 def init_model(window_size,dropout_value,activation_function,loss_function,optimizer,X_train):
      #Create a Sequential model using Keras
        # Initialising the RNN
     model = Sequential()
 
-    # Adding the output layer
-    # model.add(Dense(1,activation='tanh'))
     #First recurrent layer with dropout
     model.add(Bidirectional(LSTM(window_size, return_sequences=True), input_shape=(X_train.shape[1], X_train.shape[2])))
-    model.add(Dropout(dropout_value))
+    # model.add(Dropout(dropout_value))
 
     #Second recurrent layer with dropout
     model.add(Bidirectional(LSTM((window_size*2), return_sequences=True)))
-    model.add(Dropout(dropout_value))
+    # model.add(Dropout(dropout_value))
 
     #Third recurrent layer
     model.add(Bidirectional(LSTM(window_size, return_sequences=False)))
@@ -145,7 +63,8 @@ def fit_model(model,X_train,Y_train,batch_num,num_epoch,val_split):
     start = time.time()
 
     #Train the model on X_train and Y_train
-    model.fit(X_train, Y_train, batch_size= batch_num, nb_epoch=num_epoch, validation_split= val_split)
+    history = model.fit(X_train, Y_train, batch_size= batch_num, nb_epoch=num_epoch, validation_split= val_split)
+    plotTrainingInfo(history)
 
     #Get the time it took to train the model (in seconds)
     training_time = int(math.floor(time.time() - start))
@@ -252,20 +171,7 @@ def calculate_statistics(true_pos,false_pos,true_neg,false_neg,y_predict,Y_test)
 
     return precision, recall, F1, MSE
 
-
-
-
 # End Kaggle
-
-def loader(infile):
-    dataframe = pd.read_csv(infile, parse_dates=['Date'])
-    # dataframe = dataframe.drop([0,1,2,3],axis=0)
-    crypto_data = {}
-    # crypto_data["0x"] = dataframe.loc[dataframe["Currency"] == "0x"]
-    crypto_data["bitcoin"] = dataframe.loc[dataframe["Currency"] == "bitcoin"]
-    # bitcoin,ethereum,ripple,litecoin,eos,bitcoin-cash,tron,stellar,binance-coin
-    return crypto_data
-
 
 def plotTrainingInfo(history):
     # Plot training Details
@@ -291,8 +197,8 @@ def plotTrainingInfo(history):
 def plotFeatures(features,targets,featureList,targetList):
     plt.plot(features)
     plt.title('Features')
-    plt.xlabel("Feature Value")
-    plt.ylabel('Days')
+    plt.xlabel("Days")
+    plt.ylabel('Feature Value')
     plt.legend(featureList,loc='upper left')
     plt.show()
     
@@ -303,28 +209,47 @@ def plotFeatures(features,targets,featureList,targetList):
     plt.legend(targetList,loc='upper left')
     plt.show()
 
+def plotTest(X,Y,target,legend):
+    plt.plot(X)
+    plt.plot(Y)
+    plt.title("Test Prediction vs Target")
+    plt.ylabel(target)
+    plt.xlabel('Days')
+    plt.legend(legend)
+    plt.show()
 
 def loadData2(filename,window_length):
-    raw_data = pd.read_csv(filename,header=0)
-    # print(filename)
-    
-    # training_data = raw_data[['High','Volume BTC']]
-    # training_dataY = raw_data['High']
-    training_data = raw_data[['average price','velocity']]
-    training_dataY = raw_data[['average price']]
-    # plotFeatures(training_data[:],training_dataY[:],['average price','velocity'],['average price'])
+    np.random.seed(0)
+ 
+    raw_data = pd.read_csv(filename,header=0)    
+ 
+    features = ['Volume BTC','unnormalized speculation','Open','Close','velocity','delta vol']
+    targets = ['average price']
+
+    training_X = raw_data[features]
+    training_Y = raw_data[targets]
+
+    training_X = training_X.values
+    training_Y = training_Y.values
+    training_X = np.flip(training_X,axis=0)
+    training_Y = np.flip(training_Y,axis=0)
+
+
+    # Shuffle the data
+    # When data is shuffled training gets worse makes Sense!
+    # np.random.shuffle(training_X)
+    # np.random.shuffle(training_Y)
+    # plotFeatures(training_X[:],training_Y[:],features,targets)
 
     
-    training = training_data.values
-    split = int(len(training)*.9)
+    split = int(len(training_X)*.9)
     # Data preprocess
-    X_train = training[:split]
-    X_test = training[split:]
-    Y_train = training_dataY[:split]
-    Y_test = training_dataY[split:]
-    origY_Test= Y_test
+    X_train = training_X[:split]
+    X_test = training_X[split:]
+    Y_train = training_Y[:split]
+    Y_test = training_Y[split:]
+    origYTest= Y_test
 
-    # unnormalized_bases = newTest[:newTest.shape[0],0:1]
 
     sc = MinMaxScaler() #Normalize to 1
     # sc = StandardScaler()
@@ -333,55 +258,44 @@ def loadData2(filename,window_length):
     Y_train = sc.fit_transform(Y_train)
     X_test = sc.fit_transform(X_test)
     Y_test = sc.fit_transform(Y_test)
-
-    # plotFeatures(X_train[:],Y_train[:],['average price','velocity'],['average price'])
+    plotFeatures(X_train[:],Y_train[:],features,targets)
 
     X_train = np.reshape(X_train,(X_train.shape[0],1,X_train.shape[1]))
     Y_train = np.reshape(Y_train,(Y_train.shape[0],Y_train.shape[1]))
     X_test = np.reshape(X_test,(X_test.shape[0],1,X_test.shape[1]))
     Y_test = np.reshape(Y_test,(Y_test.shape[0],Y_test.shape[1]))
 
-    regressor = init_model(window_length, 0.2, 'tanh', 'mse', 'adam',X_train)
+    regressor = init_model(window_length, 0.2, 'tanh', 'mse', 'rmsprop',X_train)
     regressor.summary()
 
     print('Training')
     BATCH_SIZE=64
     EPOCHS = 75
-    history = regressor.fit([X_train], Y_train,
-            batch_size=BATCH_SIZE,
-            epochs=EPOCHS,
-            validation_split=0.05)
+    # Fitting the RNN to the Training set
 
-    plotTrainingInfo(history)
+    regressor, trainingtime = fit_model(regressor,X_train,Y_train,BATCH_SIZE,EPOCHS,0.05)
 
     print('Evaluation')
     loss, mse = regressor.evaluate([X_test], Y_test,
                             batch_size=BATCH_SIZE)
     print('Test loss / test mse = {:.4f} / {:.4f}'.format(loss, mse))
 
-    # Fitting the RNN to the Training set
-    # regressor.fit(X_train, Y_train, batch_size = 5, epochs = 100)
-    # def fit_model(model,X_train,Y_train,batch_num,num_epoch,val_split):
-    # make predictions
-    # scaler = MinMaxScaler(feature_range=(0, 1))
-    # dataset = scaler.fit_transform(training_data)
-    # trainPredict = regressor.predict(X_train)
-    # standard_scalerX.fit(X_test)
-    # X_test_std = standard_scalerX.transform(X_test)
-    # X_test_std = X_test_std.astype('float32')
+    # make prediction
     testPredict = regressor.predict(X_test)
-    testPredict = sc.inverse_transform(testPredict)
-    Y_test = origY_Test
-    # invert predictions
-    # trainPredict2 = scaler.inverse_transform(trainPredict)
-    # trainY = scaler.inverse_transform([Y_train])
-    # testPredict = scaler.inverse_transform(testPredict)
-    # testY = scaler.inverse_transform([Y_test])
+    trainPredict = regressor.predict(X_train)
+
     # calculate root mean squared error
-    # trainScore = math.sqrt(mean_squared_error(Y_train[0], trainPredict2[:,0]))
-    # print('Train Score: %.2f RMSE' % (trainScore))
-    testScore = math.sqrt(mean_squared_error(Y_test[:], testPredict[:]))
+    trainScore = np.sqrt(mean_squared_error(Y_train, trainPredict))
+    print('Train Score: %.2f RMSE' % (trainScore))
+    testScore = np.sqrt(mean_squared_error(Y_test[:], testPredict[:]))
     print('Test Score: %.2f RMSE' % (testScore))
+    plotTest(Y_test,testPredict,"average price",["Y_test","Y Prediction"])
+
+    y_predict, real_y_test, real_y_predict, fig1 = test_model(regressor, X_test, Y_test, origYTest)
+    #Show the plot
+    plt.show(fig1)
+
+    # binary_price(real_y_test,,real_y_predict)
     
     return regressor,testScore
 
@@ -390,18 +304,6 @@ def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
 
 def main():
-    # data = loader('clean_crypto_data.csv')
-    # model = init_model(window_size, 0.2, 'linear', 'mse', 'adam',X_train)
-    # print(model.summary())
-
-    # model, training_time = fit_model(model, X_train, Y_train, 1024, 100, .05)
-    # #Print the training time
-    # print("Training time", training_time, "seconds")
-
-
-    # y_predict, real_y_test, real_y_predict, fig1 = test_model(model, X_test, Y_test, unnormalized_bases)
-    # #Show the plot
-    # plt.show(fig1)
 
     # Y_daybefore, Y_test, delta_predict, delta_real, fig2 = price_change(Y_daybefore, Y_test, y_predict)
     # #Show the plot
