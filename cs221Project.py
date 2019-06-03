@@ -203,7 +203,7 @@ def plotFeatures(features,targets,featureList,targetList):
     plt.show()
     
     plt.plot(targets)
-    plt.title('Target Values')
+    plt.title('Target Values(Average Price of BTC)')
     plt.xlabel("Days")
     plt.ylabel('Target Value')
     plt.legend(targetList,loc='upper left')
@@ -215,15 +215,19 @@ def plotTest(X,Y,target,legend):
     plt.title("Test Prediction vs Target")
     plt.ylabel(target)
     plt.xlabel('Days')
-    plt.legend(legend)
+    # legend.append("features: " + "".join(features))
+    plt.legend(legend,loc='upper left')
     plt.show()
 
 def loadData2(filename,window_length):
+    BATCH_SIZE=64  
+    EPOCHS = 18
     np.random.seed(0)
  
     raw_data = pd.read_csv(filename,header=0)    
  
-    features = ['Volume BTC','unnormalized speculation','Open','Close','velocity','delta vol']
+    # features = ['Volume BTC','unnormalized speculation','Open','Close','velocity','delta vol']
+    features = ['velocity']
     targets = ['average price']
 
     training_X = raw_data[features]
@@ -234,13 +238,11 @@ def loadData2(filename,window_length):
     training_X = np.flip(training_X,axis=0)
     training_Y = np.flip(training_Y,axis=0)
 
-
     # Shuffle the data
     # When data is shuffled training gets worse makes Sense!
     # np.random.shuffle(training_X)
     # np.random.shuffle(training_Y)
     # plotFeatures(training_X[:],training_Y[:],features,targets)
-
     
     split = int(len(training_X)*.9)
     # Data preprocess
@@ -250,7 +252,6 @@ def loadData2(filename,window_length):
     Y_test = training_Y[split:]
     origYTest= Y_test
 
-
     sc = MinMaxScaler() #Normalize to 1
     # sc = StandardScaler()
 
@@ -258,7 +259,7 @@ def loadData2(filename,window_length):
     Y_train = sc.fit_transform(Y_train)
     X_test = sc.fit_transform(X_test)
     Y_test = sc.fit_transform(Y_test)
-    plotFeatures(X_train[:],Y_train[:],features,targets)
+    # plotFeatures(X_train[:],Y_train[:],features,targets)
 
     X_train = np.reshape(X_train,(X_train.shape[0],1,X_train.shape[1]))
     Y_train = np.reshape(Y_train,(Y_train.shape[0],Y_train.shape[1]))
@@ -269,8 +270,7 @@ def loadData2(filename,window_length):
     regressor.summary()
 
     print('Training')
-    BATCH_SIZE=64
-    EPOCHS = 75
+   
     # Fitting the RNN to the Training set
 
     regressor, trainingtime = fit_model(regressor,X_train,Y_train,BATCH_SIZE,EPOCHS,0.05)
@@ -289,13 +289,15 @@ def loadData2(filename,window_length):
     print('Train Score: %.2f RMSE' % (trainScore))
     testScore = np.sqrt(mean_squared_error(Y_test[:], testPredict[:]))
     print('Test Score: %.2f RMSE' % (testScore))
-    plotTest(Y_test,testPredict,"average price",["Y_test","Y Prediction"])
 
+    
+    s = "features-{}".format(",".join(features))
+
+    plotTest(Y_test,testPredict,"average price",["Y_test","Y Prediction",s])
     y_predict, real_y_test, real_y_predict, fig1 = test_model(regressor, X_test, Y_test, origYTest)
     #Show the plot
     plt.show(fig1)
 
-    # binary_price(real_y_test,,real_y_predict)
     
     return regressor,testScore
 
