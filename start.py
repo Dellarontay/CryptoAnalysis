@@ -28,20 +28,7 @@ def loader(infile):
     # dataframe = dataframe.drop([0,1,2,3],axis=0)
     crypto_data = {}
     # crypto_data["0x"] = dataframe.loc[dataframe["Currency"] == "0x"]
-    crypto_data["bitcoin"] = dataframe.loc[dataframe["Currency"] == "bitcoin"]
-    # crypto_data["ethereum"] = dataframe.loc[dataframe["Currency"] == "ethereum"]
-    # crypto_data["ripple"] = dataframe.loc[dataframe["Currency"] == "ripple"]
-    # crypto_data["litecoin"] = dataframe.loc[dataframe["Currency"] == "litecoin"]
-    # crypto_data["eos"] = dataframe.loc[dataframe["Currency"] == "eos"]
-    # crypto_data["bitcoin-cash"] = dataframe.loc[dataframe["Currency"] == "bitcoin-cash"]
-    # crypto_data["tron"] = dataframe.loc[dataframe["Currency"] == "tron"]
-    # crypto_data["stellar"] = dataframe.loc[dataframe["Currency"] == "stellar"]
-    # crypto_data["binance-coin"] = dataframe.loc[dataframe["Currency"] == "binance-coin"]
-
-
-
-
-    # bitcoin,ethereum,ripple,litecoin,eos,bitcoin-cash,tron,stellar,binance-coin
+    crypto_data["bitcoin"] = dataframe
     return crypto_data
 
 def predict(crypto_data):

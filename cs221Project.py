@@ -5,7 +5,8 @@ from datetime import datetime
 ## Keras for deep learning
 import keras
 from keras.layers import Dense, Activation, Dropout
-from keras.layers.recurrent import LSTM
+from keras.layers.recurrent import LSTM as cudaLSTM
+# from keras.layers import CuDNNLSTM as cudaLSTM
 from keras.layers import Bidirectional
 from keras.models import Sequential
 
@@ -29,23 +30,27 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import StandardScaler
 
 from keras.utils import plot_model
+import keras.backend as K
+
+
 
 
 def init_model(window_size,dropout_value,activation_function,loss_function,optimizer,X_train):
      #Create a Sequential model using Keras
-       # Initialising the RNN
+    #    keras.layers.CuDNNLSTM(units, kernel_initializer='glorot_uniform', recurrent_initializer='orthogonal', bias_initializer='zeros', unit_forget_bias=True, kernel_regularizer=None, recurrent_regularizer=None, bias_regularizer=None, activity_regularizer=None, kernel_constraint=None, recurrent_constraint=None, bias_constraint=None, return_sequences=False, return_state=False, stateful=False)
+
     model = Sequential()
 
     #First recurrent layer with dropout
-    model.add(Bidirectional(LSTM(window_size, return_sequences=True), input_shape=(X_train.shape[1], X_train.shape[2])))
-    # model.add(Dropout(dropout_value))
+    model.add(Bidirectional(cudaLSTM(window_size, return_sequences=True), input_shape=(X_train.shape[1], X_train.shape[2])))
+    model.add(Dropout(dropout_value))
 
     #Second recurrent layer with dropout
-    model.add(Bidirectional(LSTM((window_size*2), return_sequences=True)))
-    # model.add(Dropout(dropout_value))
+    model.add(Bidirectional(cudaLSTM((window_size*2), return_sequences=True)))
+    model.add(Dropout(dropout_value))
 
     #Third recurrent layer
-    model.add(Bidirectional(LSTM(window_size, return_sequences=False)))
+    model.add(Bidirectional(cudaLSTM(window_size, return_sequences=False)))
 
     #Output layer (returns the predicted value)
     model.add(Dense(units=1))
@@ -54,7 +59,7 @@ def init_model(window_size,dropout_value,activation_function,loss_function,optim
     model.add(Activation(activation_function))
 
     #Set loss function and optimizer
-    model.compile(loss=loss_function, optimizer=optimizer,metrics=["mse"])
+    model.compile(loss=loss_function, optimizer=optimizer,metrics=[rmseMetric])
     
     return model
 
@@ -176,8 +181,10 @@ def calculate_statistics(true_pos,false_pos,true_neg,false_neg,y_predict,Y_test)
 def plotTrainingInfo(history):
     # Plot training Details
     # Plot MSE values
-    plt.plot(history.history['mean_squared_error'])
-    plt.plot(history.history['val_mean_squared_error'])
+    # print(history.history)
+    # input("wait")
+    plt.plot(history.history['rmseMetric'])
+    plt.plot(history.history['val_rmseMetric'])
 
     plt.title('MSE')
     plt.ylabel('MSE')
@@ -221,22 +228,31 @@ def plotTest(X,Y,target,legend):
 
 def loadData2(filename,window_length):
     BATCH_SIZE=64  
-    EPOCHS = 18
+    EPOCHS = 70
     np.random.seed(0)
  
     raw_data = pd.read_csv(filename,header=0)    
  
     # features = ['Volume BTC','unnormalized speculation','Open','Close','velocity','delta vol']
-    features = ['velocity','unnormalized speculation']
+    features = ['unnormalized speculation','velocity','delta vol','average price']
     targets = ['average price']
 
     training_X = raw_data[features]
     training_Y = raw_data[targets]
 
+
     training_X = training_X.values
     training_Y = training_Y.values
     training_X = np.flip(training_X,axis=0)
     training_Y = np.flip(training_Y,axis=0)
+    print(training_Y)
+    # Change target to be predicting tomorrows price
+    # training_Y = np.roll(training_Y,1)
+    training_Y = training_Y[1:]
+    print(training_Y)
+    listTrain = list(training_X)
+    listTrain.pop()
+    training_X = np.asarray(listTrain)
 
     # Shuffle the data
     # When data is shuffled training gets worse makes Sense!
@@ -259,7 +275,9 @@ def loadData2(filename,window_length):
     Y_train = sc.fit_transform(Y_train)
     X_test = sc.fit_transform(X_test)
     Y_test = sc.fit_transform(Y_test)
-    plotFeatures(X_train[:],Y_train[:],features,targets)
+
+    # X_train[:]
+    # plotFeatures(X_train[:],Y_train[:],features,targets)
 
     X_train = np.reshape(X_train,(X_train.shape[0],1,X_train.shape[1]))
     Y_train = np.reshape(Y_train,(Y_train.shape[0],Y_train.shape[1]))
@@ -285,9 +303,20 @@ def loadData2(filename,window_length):
     trainPredict = regressor.predict(X_train)
 
     # calculate root mean squared error
-    trainScore = np.sqrt(mean_squared_error(Y_train, trainPredict))
+    trainScore = rmse(trainPredict,Y_train)
     print('Train Score: %.2f RMSE' % (trainScore))
-    testScore = np.sqrt(mean_squared_error(Y_test[:], testPredict[:]))
+    # testScore = rmse(sc.inverse_transform(testPredict),origY_test)
+
+    testScore = rmse(testPredict,Y_test)
+    print('Test Score: %.2f RMSE' % (testScore))
+
+    print("Unnormalized Version")
+
+    trainScore = rmse(sc.inverse_transform(trainPredict),sc.inverse_transform(Y_train))
+    print('Train Score: %.2f RMSE' % (trainScore))
+    # testScore = rmse(sc.inverse_transform(testPredict),origY_test)
+
+    testScore = rmse(sc.inverse_transform(testPredict),origYTest)
     print('Test Score: %.2f RMSE' % (testScore))
 
     
@@ -304,6 +333,10 @@ def loadData2(filename,window_length):
 
 def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
+def rmseMetric (y_true, y_pred):
+    return K.sqrt(K.mean(K.square(y_pred -y_true)))
+# def rmseMetric(y_true,y_pred):
+#     return np.sqrt((np.mean((y_pred-y_true)**2)))
 
 def main():
 
