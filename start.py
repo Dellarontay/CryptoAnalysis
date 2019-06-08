@@ -106,7 +106,7 @@ def mean_squared(crypto_data):
             #print('predicted=%f, expected=%f' % (yhat, obs))
         # newError = mean_squared_error(test, predictions)
         error = rmse(predictions,test)
-        print('Test MSE: %.3f with predictions in red' % error)
+        print('Test RMSE: %.3f with predictions in red' % error)
         # plot
         plt.plot(test)
         plt.plot(predictions, color='red')
@@ -118,12 +118,10 @@ def rmse(predictions, targets):
     return np.sqrt(((predictions - targets) ** 2).mean())
 
 def main():
-    data = loader('clean_crypto_data.csv')
-
+    data = loader('btc_spec.csv')
     # parameters =  initialize_parameters(200*4*365,5,10)
-
-    predict(data)
-    # mean_squared(data)
+    # predict(data)
+    mean_squared(data)
     # print(data)
 
 

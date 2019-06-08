@@ -227,7 +227,7 @@ def loadData2(filename,window_length):
     raw_data = pd.read_csv(filename,header=0)    
  
     # features = ['Volume BTC','unnormalized speculation','Open','Close','velocity','delta vol']
-    features = ['velocity']
+    features = ['velocity','unnormalized speculation']
     targets = ['average price']
 
     training_X = raw_data[features]
@@ -259,7 +259,7 @@ def loadData2(filename,window_length):
     Y_train = sc.fit_transform(Y_train)
     X_test = sc.fit_transform(X_test)
     Y_test = sc.fit_transform(Y_test)
-    # plotFeatures(X_train[:],Y_train[:],features,targets)
+    plotFeatures(X_train[:],Y_train[:],features,targets)
 
     X_train = np.reshape(X_train,(X_train.shape[0],1,X_train.shape[1]))
     Y_train = np.reshape(Y_train,(Y_train.shape[0],Y_train.shape[1]))
